@@ -1,4 +1,5 @@
 const Transaction = require('../blockchain/Transaction');
+const Invoice = require('../models/Invoice');
 const db = require('../config/database');
 
 const transfer = (req, res, blockchain) => {
@@ -62,7 +63,7 @@ const transfer = (req, res, blockchain) => {
 
 const payment = (req, res, blockchain) => {
   try {
-    const { merchantName, amount, description } = req.body;
+    const { merchantName, amount, description, installments } = req.body;
     const fromAddress = req.userWalletAddress;
 
     if (!merchantName || !amount) {
@@ -73,17 +74,24 @@ const payment = (req, res, blockchain) => {
       return res.status(400).json({ error: 'Amount must be greater than 0' });
     }
 
+    const numInstallments = installments || 1;
+    if (numInstallments < 1 || numInstallments > 24) {
+      return res.status(400).json({ error: 'Installments must be between 1 and 24' });
+    }
+
     const sender = db.findUserByWalletAddress(fromAddress);
     if (!sender) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     const balance = blockchain.getBalanceOfAddress(fromAddress);
-    if (balance < amount) {
+    const installmentAmount = amount / numInstallments;
+
+    if (balance < installmentAmount) {
       return res.status(400).json({ 
-        error: 'Insufficient balance',
+        error: 'Insufficient balance for first installment',
         currentBalance: balance,
-        required: amount
+        required: installmentAmount
       });
     }
 
@@ -91,17 +99,33 @@ const payment = (req, res, blockchain) => {
       fromAddress,
       'MERCHANT',
       amount,
-      'PAYMENT',
+      numInstallments > 1 ? 'INSTALLMENT_PAYMENT' : 'PAYMENT',
       description || 'Payment to ' + merchantName,
-      'ECA'
+      'ECA',
+      numInstallments
     );
 
     blockchain.addTransaction(transaction);
     blockchain.minePendingTransactions('SYSTEM');
 
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+    let invoice = db.findInvoiceByUserAndMonth(sender.id, month, year);
+    
+    if (!invoice) {
+      invoice = new Invoice(sender.id, month, year);
+      db.addInvoice(invoice);
+    }
+    
+    invoice.addTransaction(transaction);
+    db.updateInvoice(invoice);
+
     return res.status(200).json({
       message: 'Payment successful',
       transaction: transaction,
+      installments: numInstallments,
+      installmentAmount: installmentAmount,
       newBalance: blockchain.getBalanceOfAddress(fromAddress)
     });
   } catch (error) {
@@ -141,7 +165,7 @@ const getStatement = (req, res, blockchain) => {
       if (tx.fromAddress === address) {
         const recipient = db.findUserByWalletAddress(tx.toAddress);
         otherParty = recipient ? recipient.name : tx.toAddress;
-        transactionType = tx.type === 'TRANSFER' ? 'SENT' : 'PAYMENT';
+        transactionType = tx.type === 'TRANSFER' ? 'SENT' : tx.type;
       } else if (tx.toAddress === address) {
         const sender = db.findUserByWalletAddress(tx.fromAddress);
         otherParty = sender ? sender.name : (tx.fromAddress || 'SYSTEM');
@@ -191,7 +215,7 @@ const getStatementByPeriod = (req, res, blockchain) => {
       if (tx.fromAddress === address) {
         const recipient = db.findUserByWalletAddress(tx.toAddress);
         otherParty = recipient ? recipient.name : tx.toAddress;
-        transactionType = tx.type === 'TRANSFER' ? 'SENT' : 'PAYMENT';
+        transactionType = tx.type === 'TRANSFER' ? 'SENT' : tx.type;
       } else if (tx.toAddress === address) {
         const sender = db.findUserByWalletAddress(tx.fromAddress);
         otherParty = sender ? sender.name : (tx.fromAddress || 'SYSTEM');

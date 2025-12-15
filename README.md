@@ -25,11 +25,23 @@ ECA é uma bandeira de cartão de crédito que utiliza blockchain para registrar
 - Cadastro e emissão automática de cartão ECA
 - Sistema de autenticação (login/logout)
 - Transferências entre portadores de cartão
-- Pagamentos a estabelecimentos
+- **Pagamentos com parcelamento (até 24x sem juros)**
 - Consulta de saldo e limite disponível
+- **Visualização de faturas mensais**
+- **Consulta de faturas por período específico**
+- **Pagamento de faturas com cálculo de juros**
 - Extrato completo de transações
 - Extrato filtrado por período
 - Blockchain com mineração automática e validação
+
+### Gestão de Crédito e Juros
+
+- **Parcelamento**: Compras podem ser parceladas em até 24x
+- **Fatura Mensal**: Fechamento dia 5, vencimento dia 15
+- **Pagamento Mínimo**: 15% do valor total da fatura
+- **Taxa de Juros**: 2,5% ao mês sobre saldo devedor
+- **Juros por Atraso**: 5% sobre valores em atraso após vencimento
+- **Consulta de Parcelas**: Visualização detalhada de compras parceladas
 
 ## Instalação
 
@@ -61,7 +73,9 @@ Interface disponível em: http://localhost:3000
 4. Utilize o dashboard para:
    - Visualizar cartão virtual
    - Realizar transferências (usando email do destinatário)
-   - Efetuar pagamentos
+   - Efetuar pagamentos (à vista ou parcelado)
+   - Consultar faturas mensais
+   - Pagar faturas
    - Consultar extratos
 
 ## API Endpoints
@@ -73,10 +87,16 @@ Interface disponível em: http://localhost:3000
 
 ### Transações
 - `POST /api/transactions/transfer` - Transferência
-- `POST /api/transactions/payment` - Pagamento
+- `POST /api/transactions/payment` - Pagamento (com suporte a parcelamento)
 - `GET /api/transactions/balance` - Consultar saldo
 - `GET /api/transactions/statement` - Extrato completo
 - `GET /api/transactions/statement/period` - Extrato por período
+
+### Faturas
+- `GET /api/invoices/current` - Fatura atual
+- `GET /api/invoices/:month/:year` - Fatura de mês específico
+- `GET /api/invoices/all` - Todas as faturas
+- `POST /api/invoices/pay` - Pagar fatura
 
 ### Blockchain
 - `GET /api/blockchain/chain` - Visualizar blockchain
@@ -90,8 +110,8 @@ Projeto03/
 ├── eca-blockchain-backend/
 │   ├── src/
 │   │   ├── blockchain/      # Implementação da blockchain
-│   │   ├── models/          # Modelo de usuário
-│   │   ├── controllers/     # Lógica de negócio
+│   │   ├── models/          # User, Invoice
+│   │   ├── controllers/     # Auth, Transactions, Invoices
 │   │   ├── routes/          # Rotas da API
 │   │   ├── middleware/      # Autenticação
 │   │   ├── config/          # Configurações
@@ -100,9 +120,9 @@ Projeto03/
 │
 └── eca-blockchain-frontend/
     ├── src/
-    │   ├── components/      # Componentes reutilizáveis
-    │   ├── pages/          # Login, Register, Dashboard
-    │   ├── services/       # Integração com API
+    │   ├── components/      # Navbar, CardDisplay
+    │   ├── pages/          # Login, Register, Dashboard, Invoices
+    │   ├── services/       # API integration
     │   ├── context/        # Estado global
     │   └── App.js
     └── package.json
@@ -113,9 +133,23 @@ Projeto03/
 - Algoritmo de Hash: SHA-256
 - Consenso: Proof-of-Work
 - Dificuldade de Mineração: 2
-- Tipos de Transação: TRANSFER, PAYMENT, CREDIT
+- Tipos de Transação: TRANSFER, PAYMENT, INSTALLMENT_PAYMENT, CREDIT
 - Validação automática da cadeia
 - Registro imutável de todas as operações
+
+## Sistema de Faturas
+
+### Funcionamento
+- **Fechamento**: Todo dia 5 de cada mês
+- **Vencimento**: Todo dia 15 de cada mês
+- **Pagamento Mínimo**: 15% do total
+- **Pagamento Total**: Sem juros até a data de vencimento
+- **Parcelamento**: Compras podem ser parceladas em até 24x
+
+### Taxas
+- **Taxa Mensal**: 2,5% sobre saldo devedor
+- **Taxa de Atraso**: 5% adicional após vencimento
+- **Parcelamento**: Sem juros (custo já incluído no valor)
 
 ## Segurança
 
@@ -137,6 +171,7 @@ Projeto03/
 - Sistema acadêmico para demonstração de conceitos
 - Dados armazenados em memória (reset ao reiniciar)
 - Backend e frontend devem rodar simultaneamente
+- Juros calculados automaticamente em faturas vencidas
 
 ## Licença
 

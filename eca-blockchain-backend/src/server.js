@@ -4,6 +4,7 @@ const Blockchain = require('./blockchain/Blockchain');
 const createAuthRoutes = require('./routes/authRoutes');
 const createTransactionRoutes = require('./routes/transactionRoutes');
 const createBlockchainRoutes = require('./routes/blockchainRoutes');
+const createInvoiceRoutes = require('./routes/invoiceRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +19,7 @@ console.log('ECA Blockchain initialized!');
 app.use('/api/auth', createAuthRoutes(ecaBlockchain));
 app.use('/api/transactions', createTransactionRoutes(ecaBlockchain));
 app.use('/api/blockchain', createBlockchainRoutes(ecaBlockchain));
+app.use('/api/invoices', createInvoiceRoutes(ecaBlockchain));
 
 app.get('/api/health', (req, res) => {
   res.status(200).json({

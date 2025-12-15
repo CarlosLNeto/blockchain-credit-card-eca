@@ -19,9 +19,11 @@ import {
   CircularProgress,
   Card,
   CardContent,
+  MenuItem,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { transactionService } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 import CardDisplay from '../components/CardDisplay';
 import SendIcon from '@mui/icons-material/Send';
 import PaymentIcon from '@mui/icons-material/Payment';
@@ -29,6 +31,7 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [balance, setBalance] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -46,6 +49,7 @@ const Dashboard = () => {
     merchantName: '',
     amount: '',
     description: '',
+    installments: 1,
   });
 
   const [periodFilter, setPeriodFilter] = useState({
@@ -106,13 +110,19 @@ const Dashboard = () => {
     setLoading(true);
 
     try {
-      await transactionService.payment({
+      const response = await transactionService.payment({
         merchantName: paymentData.merchantName,
         amount: parseFloat(paymentData.amount),
         description: paymentData.description,
+        installments: parseInt(paymentData.installments),
       });
-      setSuccess('Pagamento realizado com sucesso!');
-      setPaymentData({ merchantName: '', amount: '', description: '' });
+      
+      const installmentsText = paymentData.installments > 1 
+        ? ` em ${paymentData.installments}x de ${formatCurrency(response.data.installmentAmount)}`
+        : '';
+      
+      setSuccess(`Pagamento realizado com sucesso${installmentsText}!`);
+      setPaymentData({ merchantName: '', amount: '', description: '', installments: 1 });
       loadBalance();
       loadTransactions();
     } catch (err) {
@@ -180,6 +190,15 @@ const Dashboard = () => {
                       Utilizado: {formatCurrency(balance.used)}
                     </Typography>
                   </Box>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                    onClick={() => navigate('/invoices')}
+                    startIcon={<ReceiptIcon />}
+                  >
+                    Ver Faturas
+                  </Button>
                 </>
               ) : (
                 <CircularProgress />
@@ -268,6 +287,21 @@ const Dashboard = () => {
                   />
                   <TextField
                     fullWidth
+                    select
+                    label="Parcelas"
+                    value={paymentData.installments}
+                    onChange={(e) => setPaymentData({ ...paymentData, installments: e.target.value })}
+                    margin="normal"
+                    helperText="Pagamentos acima de 1x são parcelados sem juros"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map((num) => (
+                      <MenuItem key={num} value={num}>
+                        {num}x {paymentData.amount && num > 1 ? `(${formatCurrency(paymentData.amount / num)}/mês)` : ''}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    fullWidth
                     label="Descrição (opcional)"
                     value={paymentData.description}
                     onChange={(e) => setPaymentData({ ...paymentData, description: e.target.value })}
@@ -325,6 +359,7 @@ const Dashboard = () => {
                           <TableCell>Tipo</TableCell>
                           <TableCell>Descrição</TableCell>
                           <TableCell>Outra Parte</TableCell>
+                          <TableCell>Parcelas</TableCell>
                           <TableCell align="right">Valor</TableCell>
                         </TableRow>
                       </TableHead>
@@ -335,6 +370,9 @@ const Dashboard = () => {
                             <TableCell>{tx.transactionType}</TableCell>
                             <TableCell>{tx.description}</TableCell>
                             <TableCell>{tx.otherParty}</TableCell>
+                            <TableCell>
+                              {tx.installments > 1 ? `${tx.installments}x` : 'À vista'}
+                            </TableCell>
                             <TableCell align="right" sx={{
                               color: tx.transactionType === 'RECEIVED' || tx.transactionType === 'CREDIT'
                                 ? 'success.main'

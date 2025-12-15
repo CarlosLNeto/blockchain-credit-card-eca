@@ -32,6 +32,13 @@ export const transactionService = {
     api.get(`/transactions/statement/period?startDate=${startDate}&endDate=${endDate}`),
 };
 
+export const invoiceService = {
+  getCurrentInvoice: () => api.get('/invoices/current'),
+  getInvoiceByMonth: (month, year) => api.get(`/invoices/${month}/${year}`),
+  getAllInvoices: () => api.get('/invoices/all'),
+  payInvoice: (data) => api.post('/invoices/pay', data),
+};
+
 export const blockchainService = {
   getChain: () => api.get('/blockchain/chain'),
   getPending: () => api.get('/blockchain/pending'),
