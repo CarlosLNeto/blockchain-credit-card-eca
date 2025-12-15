@@ -84,8 +84,20 @@ const payment = (req, res, blockchain) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Aplicar juros para parcelamentos acima de 3x
+    let totalAmount = amount;
+    let interestRate = 0;
+    
+    if (numInstallments > 3) {
+      interestRate = 2.5; // 2.5% ao mês
+      const monthlyInterest = (interestRate / 100);
+      // Fórmula de juros compostos
+      totalAmount = amount * Math.pow(1 + monthlyInterest, numInstallments);
+      totalAmount = Math.round(totalAmount * 100) / 100; // Arredondar para 2 casas decimais
+    }
+
     const balance = blockchain.getBalanceOfAddress(fromAddress);
-    const installmentAmount = amount / numInstallments;
+    const installmentAmount = totalAmount / numInstallments;
 
     if (balance < installmentAmount) {
       return res.status(400).json({ 
@@ -98,12 +110,16 @@ const payment = (req, res, blockchain) => {
     const transaction = new Transaction(
       fromAddress,
       'MERCHANT',
-      amount,
+      totalAmount,
       numInstallments > 1 ? 'INSTALLMENT_PAYMENT' : 'PAYMENT',
       description || 'Payment to ' + merchantName,
       'ECA',
       numInstallments
     );
+
+    if (interestRate > 0) {
+      transaction.interestRate = interestRate;
+    }
 
     blockchain.addTransaction(transaction);
     blockchain.minePendingTransactions('SYSTEM');
@@ -121,13 +137,22 @@ const payment = (req, res, blockchain) => {
     invoice.addTransaction(transaction);
     db.updateInvoice(invoice);
 
-    return res.status(200).json({
+    const responseData = {
       message: 'Payment successful',
       transaction: transaction,
       installments: numInstallments,
       installmentAmount: installmentAmount,
+      originalAmount: amount,
+      totalAmount: totalAmount,
       newBalance: blockchain.getBalanceOfAddress(fromAddress)
-    });
+    };
+
+    if (interestRate > 0) {
+      responseData.interestRate = interestRate;
+      responseData.interestAmount = totalAmount - amount;
+    }
+
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('Payment error:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });

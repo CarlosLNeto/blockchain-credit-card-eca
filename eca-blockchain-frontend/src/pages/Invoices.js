@@ -18,12 +18,16 @@ import {
   MenuItem,
   Alert,
   Chip,
+  IconButton,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { invoiceService } from '../services/api';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import PaymentIcon from '@mui/icons-material/Payment';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const Invoices = () => {
+  const navigate = useNavigate();
   const [currentInvoice, setCurrentInvoice] = useState(null);
   const [allInvoices, setAllInvoices] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
@@ -50,13 +54,14 @@ const Invoices = () => {
       setCurrentInvoice(response.data.invoice);
     } catch (err) {
       console.error('Error loading current invoice:', err);
+      setError('Erro ao carregar fatura atual');
     }
   };
 
   const loadAllInvoices = async () => {
     try {
       const response = await invoiceService.getAllInvoices();
-      setAllInvoices(response.data.invoices);
+      setAllInvoices(response.data.invoices || []);
     } catch (err) {
       console.error('Error loading invoices:', err);
     }
@@ -65,9 +70,9 @@ const Invoices = () => {
   const loadInvoiceByMonth = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await invoiceService.getInvoiceByMonth(selectedMonth, selectedYear);
       setSelectedInvoice(response.data.invoice);
-      setError('');
     } catch (err) {
       setError('Fatura não encontrada para este período');
       setSelectedInvoice(null);
@@ -84,6 +89,7 @@ const Invoices = () => {
 
     try {
       setLoading(true);
+      setError('');
       await invoiceService.payInvoice({
         invoiceId: currentInvoice.id,
         amount: parseFloat(paymentAmount)
@@ -103,7 +109,7 @@ const Invoices = () => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(value);
+    }).format(value || 0);
   };
 
   const formatDate = (timestamp) => {
@@ -132,13 +138,18 @@ const Invoices = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        <ReceiptIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-        Minhas Faturas
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton onClick={() => navigate('/dashboard')} sx={{ mr: 2 }}>
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography variant="h4">
+          <ReceiptIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          Minhas Faturas
+        </Typography>
+      </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       <Grid container spacing={3}>
         {/* Fatura Atual */}
@@ -149,7 +160,7 @@ const Invoices = () => {
                 Fatura Atual - {months[new Date().getMonth()]} {new Date().getFullYear()}
               </Typography>
               
-              {currentInvoice && (
+              {currentInvoice ? (
                 <Box>
                   <Grid container spacing={2} sx={{ mt: 2 }}>
                     <Grid item xs={12} md={3}>
@@ -196,7 +207,7 @@ const Invoices = () => {
                       Pagamento Mínimo: {formatCurrency(currentInvoice.minimumPayment)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Taxa de Juros: {currentInvoice.interestRate}% ao mês
+                      Taxa de Juros (atraso): {currentInvoice.lateInterestRate}%
                     </Typography>
                   </Box>
 
@@ -226,13 +237,13 @@ const Invoices = () => {
                       <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
                         <Button
                           size="small"
-                          onClick={() => setPaymentAmount(currentInvoice.minimumPayment)}
+                          onClick={() => setPaymentAmount(currentInvoice.minimumPayment.toString())}
                         >
                           Pagar Mínimo
                         </Button>
                         <Button
                           size="small"
-                          onClick={() => setPaymentAmount(currentInvoice.remainingBalance)}
+                          onClick={() => setPaymentAmount(currentInvoice.remainingBalance.toString())}
                         >
                           Pagar Total
                         </Button>
@@ -252,6 +263,7 @@ const Invoices = () => {
                               <TableCell>Data</TableCell>
                               <TableCell>Descrição</TableCell>
                               <TableCell>Parcelas</TableCell>
+                              <TableCell>Juros</TableCell>
                               <TableCell align="right">Valor</TableCell>
                             </TableRow>
                           </TableHead>
@@ -266,6 +278,9 @@ const Invoices = () => {
                                     'À vista'
                                   }
                                 </TableCell>
+                                <TableCell>
+                                  {tx.interestRate > 0 ? `${tx.interestRate}%` : 'Sem juros'}
+                                </TableCell>
                                 <TableCell align="right">{formatCurrency(tx.amount)}</TableCell>
                               </TableRow>
                             ))}
@@ -275,6 +290,8 @@ const Invoices = () => {
                     </Box>
                   )}
                 </Box>
+              ) : (
+                <Typography>Carregando fatura...</Typography>
               )}
             </CardContent>
           </Card>

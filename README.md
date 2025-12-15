@@ -25,7 +25,8 @@ ECA é uma bandeira de cartão de crédito que utiliza blockchain para registrar
 - Cadastro e emissão automática de cartão ECA
 - Sistema de autenticação (login/logout)
 - Transferências entre portadores de cartão
-- **Pagamentos com parcelamento (até 24x sem juros)**
+- **Pagamentos com parcelamento (até 24x)**
+- **Juros de 2,5% ao mês em parcelamentos acima de 3x**
 - Consulta de saldo e limite disponível
 - **Visualização de faturas mensais**
 - **Consulta de faturas por período específico**
@@ -36,12 +37,12 @@ ECA é uma bandeira de cartão de crédito que utiliza blockchain para registrar
 
 ### Gestão de Crédito e Juros
 
-- **Parcelamento**: Compras podem ser parceladas em até 24x
+- **Parcelamento sem juros**: 1x até 3x
+- **Parcelamento com juros**: Acima de 3x (2,5% ao mês com juros compostos)
 - **Fatura Mensal**: Fechamento dia 5, vencimento dia 15
 - **Pagamento Mínimo**: 15% do valor total da fatura
-- **Taxa de Juros**: 2,5% ao mês sobre saldo devedor
-- **Juros por Atraso**: 5% sobre valores em atraso após vencimento
-- **Consulta de Parcelas**: Visualização detalhada de compras parceladas
+- **Taxa de Juros por Atraso**: 5% sobre valores em atraso após vencimento
+- **Consulta de Parcelas**: Visualização detalhada de compras parceladas com juros aplicados
 
 ## Instalação
 
@@ -73,7 +74,7 @@ Interface disponível em: http://localhost:3000
 4. Utilize o dashboard para:
    - Visualizar cartão virtual
    - Realizar transferências (usando email do destinatário)
-   - Efetuar pagamentos (à vista ou parcelado)
+   - Efetuar pagamentos (à vista ou parcelado com juros)
    - Consultar faturas mensais
    - Pagar faturas
    - Consultar extratos
@@ -87,7 +88,7 @@ Interface disponível em: http://localhost:3000
 
 ### Transações
 - `POST /api/transactions/transfer` - Transferência
-- `POST /api/transactions/payment` - Pagamento (com suporte a parcelamento)
+- `POST /api/transactions/payment` - Pagamento (com suporte a parcelamento e juros)
 - `GET /api/transactions/balance` - Consultar saldo
 - `GET /api/transactions/statement` - Extrato completo
 - `GET /api/transactions/statement/period` - Extrato por período
@@ -102,6 +103,20 @@ Interface disponível em: http://localhost:3000
 - `GET /api/blockchain/chain` - Visualizar blockchain
 - `GET /api/blockchain/pending` - Transações pendentes
 - `GET /api/blockchain/validate` - Validar integridade
+
+## Cálculo de Juros
+
+### Parcelamento
+- **1x a 3x**: Sem juros
+- **4x ou mais**: 2,5% ao mês (juros compostos)
+
+**Exemplo**: Compra de R$ 1.000,00 em 6x
+- Valor com juros: R$ 1.000,00 × (1 + 0,025)^6 = R$ 1.159,69
+- Parcela: R$ 193,28/mês
+
+### Juros por Atraso
+- **Taxa**: 5% sobre o saldo devedor
+- **Aplicação**: Após a data de vencimento (dia 15)
 
 ## Arquitetura
 
@@ -144,12 +159,11 @@ Projeto03/
 - **Vencimento**: Todo dia 15 de cada mês
 - **Pagamento Mínimo**: 15% do total
 - **Pagamento Total**: Sem juros até a data de vencimento
-- **Parcelamento**: Compras podem ser parceladas em até 24x
+- **Parcelamento**: Acima de 3x com juros de 2,5% ao mês
 
 ### Taxas
-- **Taxa Mensal**: 2,5% sobre saldo devedor
+- **Taxa Mensal (parcelamento)**: 2,5% em compras acima de 3x
 - **Taxa de Atraso**: 5% adicional após vencimento
-- **Parcelamento**: Sem juros (custo já incluído no valor)
 
 ## Segurança
 
@@ -171,7 +185,7 @@ Projeto03/
 - Sistema acadêmico para demonstração de conceitos
 - Dados armazenados em memória (reset ao reiniciar)
 - Backend e frontend devem rodar simultaneamente
-- Juros calculados automaticamente em faturas vencidas
+- Juros calculados automaticamente em parcelamentos e faturas vencidas
 
 ## Licença
 

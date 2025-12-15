@@ -3,8 +3,20 @@ const db = require('../config/database');
 
 const getCurrentInvoice = (req, res) => {
   try {
-    const session = db.findSession(req.headers.authorization.split(' ')[1]);
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const session = db.findSession(token);
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+
     const user = db.findUserById(session.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     
     const now = new Date();
     const month = now.getMonth() + 1;
@@ -27,8 +39,21 @@ const getCurrentInvoice = (req, res) => {
 const getInvoiceByMonth = (req, res) => {
   try {
     const { month, year } = req.params;
-    const session = db.findSession(req.headers.authorization.split(' ')[1]);
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const session = db.findSession(token);
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+
     const user = db.findUserById(session.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     
     const invoice = db.findInvoiceByUserAndMonth(user.id, parseInt(month), parseInt(year));
     
@@ -45,8 +70,21 @@ const getInvoiceByMonth = (req, res) => {
 
 const getAllInvoices = (req, res) => {
   try {
-    const session = db.findSession(req.headers.authorization.split(' ')[1]);
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const session = db.findSession(token);
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+
     const user = db.findUserById(session.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     
     const invoices = db.getInvoicesByUser(user.id);
     
@@ -63,8 +101,21 @@ const getAllInvoices = (req, res) => {
 const payInvoice = (req, res, blockchain) => {
   try {
     const { invoiceId, amount } = req.body;
-    const session = db.findSession(req.headers.authorization.split(' ')[1]);
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const session = db.findSession(token);
+    if (!session) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+
     const user = db.findUserById(session.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
     
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid payment amount' });

@@ -292,7 +292,7 @@ const Dashboard = () => {
                     value={paymentData.installments}
                     onChange={(e) => setPaymentData({ ...paymentData, installments: e.target.value })}
                     margin="normal"
-                    helperText="Pagamentos acima de 1x são parcelados sem juros"
+                    helperText="Parcelamentos acima de 3x têm juros de 2.5% ao mês"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map((num) => (
                       <MenuItem key={num} value={num}>
